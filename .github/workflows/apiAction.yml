@@ -44,7 +44,7 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           script: |
             cd /home/ubuntu/project/backend
-            cp /home/ubuntu/project/dist/index.html /home/ubuntu/project/maintenance/index_tmp.html
+            cp /home/ubuntu/project/frontend/dist/index.html /home/ubuntu/project/maintenance/index_tmp.html
             cp /home/ubuntu/project/maintenance/index.html /home/ubuntu/project/frontend/dist/index.html
             docker nginx restart
             echo "유지보수 모드 활성화"
