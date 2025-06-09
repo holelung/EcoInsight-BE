@@ -1,33 +1,39 @@
 package com.semi.ecoinsight.util.file.service;
 
 import java.io.IOException;
-import java.nio.file.Files;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-
 
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.beans.factory.annotation.Value;
 
 import com.semi.ecoinsight.exception.util.FileStreamException;
 import com.semi.ecoinsight.exception.util.FileTypeNotAllowedException;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class FileService {
     
-    private final Path fileLocation;
+    private final S3Client s3Client;
 
-    public FileService() {
-        this.fileLocation = Paths.get("uploads").toAbsolutePath().normalize();
-        
-    }
+    @Value("${cloud.aws.s3.bucket}")
+    private String bucketName;
+
 
     @SuppressWarnings("null")
     public String store(MultipartFile file) {
@@ -55,25 +61,49 @@ public class FileService {
                 DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
         String newFileName = timestamp + "." + extension;
 
-        Path targetLocation = this.fileLocation.resolve(newFileName);
-        log.info("파일경로:{}", targetLocation);
+        PutObjectRequest request 
+            = PutObjectRequest.builder()
+                        .bucket(bucketName)
+                        .key(newFileName)
+                        .contentType(file.getContentType())
+                        .build();
 
         try {
-            Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
-            return "https://webjang.store/api/uploads/" + newFileName;
+            s3Client.putObject(request, RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
+            return "https://" + bucketName + ".s3.ap-northeast-2.amazonaws.com/" + newFileName;
         } catch (IOException e) {
             throw new FileStreamException("파일 저장중 오류 발생");
         }
     }
-    
+
+
+
     public void deleteFile(String fileUrl) {
-        Path filePath = fileLocation.resolve(fileUrl.substring(24)).normalize();
+        // Path filePath = fileLocation.resolve(fileUrl.substring(24)).normalize();
         
         try {
-            Files.deleteIfExists(filePath);
-        } catch (IOException e) {
-            throw new FileStreamException("파일 삭제중 오류 발생: " + e.getMessage());
+            URL url = new URI(fileUrl).toURL();
+            log.info(url.getPath());
+            String path = url.getPath().substring(1);
+
+            DeleteObjectRequest deleteRequest =
+                DeleteObjectRequest.builder()
+                                .bucket(bucketName)
+                                .key(path)
+                                .build();
+
+            s3Client.deleteObject(deleteRequest);
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
         }
+
+        // try {
+        //     Files.deleteIfExists(filePath);
+        // } catch (IOException e) {
+        //     throw new FileStreamException("파일 삭제중 오류 발생: " + e.getMessage());
+        // }
 
         
     }

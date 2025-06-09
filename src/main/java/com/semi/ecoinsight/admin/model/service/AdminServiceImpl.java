@@ -62,6 +62,9 @@ public class AdminServiceImpl implements AdminService {
         try {
             adminMapper.insertNotice(board);
         } catch (RuntimeException e) {
+            for (String url : form.getImageUrls()) {
+                fileService.deleteFile(url);
+            }
             throw new BoardInsertException("게시글 생성에 실패했습니다.");
         }
 
@@ -75,6 +78,7 @@ public class AdminServiceImpl implements AdminService {
                     boardMapper.uploadImage(a);
                 } catch (RuntimeException e) {
                     fileService.deleteFile(a.getAttachmentItem());
+                    adminMapper.deleteNotice(form.getBoardNo());
                     throw new ImageInsertException("이미지 업로드에 실패했습니다.");
                 }
             }
