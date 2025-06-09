@@ -35,6 +35,21 @@ jobs:
           fi
           echo "빌드파일 만들기 성공!"
 
+      - name: Change Maintenance Mode
+        if: github.event_name == 'push'
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd /home/ubuntu/project/backend
+            cp /home/ubuntu/project/dist/index.html /home/ubuntu/project/maintenance/index_tmp.html
+            cp /home/ubuntu/project/maintenance/index.html /home/ubuntu/project/frontend/dist/index.html
+            docker nginx restart
+            echo "유지보수 모드 활성화"
+            sleep 5
+
       - name: Deploy Boot App To EC2
         if: github.event_name == 'push'
         uses: appleboy/scp-action@master
@@ -43,10 +58,10 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY }}
           source: "build/libs/*.jar"
-          target: "/home/ubuntu/backend/app"
+          target: "/home/ubuntu/project/backend"
           strip_components: 2
 
-      - name: Execute Ansible PlayBook
+      - name: Restart Container
         if: github.event_name == 'push'
         uses: appleboy/ssh-action@master
         with:
@@ -54,6 +69,12 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            cd ~
-            ansible-playbook -i inventory.ini docker-container-api.yml
-          
+            cd /home/ubuntu/project
+            docker api restart
+            sleep 30
+            cp /home/ubuntu/project/maintenance/index_tmp.html /home/ubuntu/project/frontend/dist/index.html
+
+
+
+
+
