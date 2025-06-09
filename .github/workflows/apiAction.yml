@@ -70,7 +70,7 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           script: |
             cd /home/ubuntu/project
-            docker api restart
+            docker restart api
             sleep 30
             cp /home/ubuntu/project/maintenance/index_tmp.html /home/ubuntu/project/frontend/dist/index.html
 
