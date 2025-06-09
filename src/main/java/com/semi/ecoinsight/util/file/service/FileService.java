@@ -60,7 +60,7 @@ public class FileService {
 
         try {
             Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
-            return "http://localhost/uploads/" + newFileName;
+            return "https://webjang.store/api/uploads/" + newFileName;
         } catch (IOException e) {
             throw new FileStreamException("파일 저장중 오류 발생");
         }
